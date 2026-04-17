@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monad Mainnet Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0b;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --border-glow: rgba(255, 255, 255, 0.1);
+            --neon-blue: #00d2ff;
+            --neon-purple: #9d50bb;
+            --neon-green: #00ff87;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            font-family: 'Space Mono', monospace;
+            color: #ffffff;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Neon Accents */
+        .neon-blue { border-left: 4px solid var(--neon-blue); box-shadow: inset 10px 0 20px -15px var(--neon-blue); }
+        .neon-purple { border-left: 4px solid var(--neon-purple); box-shadow: inset 10px 0 20px -15px var(--neon-purple); }
+        .neon-green { border-left: 4px solid var(--neon-green); box-shadow: inset 10px 0 20px -15px var(--neon-green); }
+
+        .input-glow:focus {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+        }
+
+        .scan-btn {
+            background: #007bc4;
+            transition: all 0.3s ease;
+        }
+        .scan-btn:hover {
+            background: #0095ee;
+            box-shadow: 0 0 20px rgba(0, 123, 196, 0.4);
+        }
+
+        /* Table Styling */
+        .table-row {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            transition: background 0.2s;
+        }
+        .table-row:hover { background: rgba(255, 255, 255, 0.02); }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0, 210, 255, 0.2);
+            border-top-color: var(--neon-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="min-h-screen flex justify-center">
+
+    <div class="max-w-5xl w-full">
+        <div class="mb-10">
+            <h1 class="text-3xl font-bold tracking-tighter italic uppercase">
+                MONAD <span class="text-blue-400">Mainnet</span> ENGINE
+            </h1>
+            <p class="text-[10px] text-gray-500 tracking-[0.4em] mt-1 font-bold">HIGH-THROUGHPUT VOLUME TRACKER V2.1</p>
+        </div>
+
+        <div class="glass-card p-4 flex flex-col md:flex-row gap-4 mb-8">
+            <input type="text" id="wallet-input" placeholder="Enter wallet address (0x...)" 
+                   class="input-glow flex-1 bg-black/40 border border-white/10 rounded-lg py-3 px-4 text-blue-300 text-sm outline-none">
+            <input type="text" id="alias-input" placeholder="Label (optional)" 
+                   class="input-glow bg-black/40 border border-white/10 rounded-lg py-3 px-4 text-gray-400 text-sm outline-none w-full md:w-40">
+            <button onclick="addWallet()" class="scan-btn px-8 py-3 rounded-lg font-bold uppercase tracking-widest text-xs">
+                Add Wallet
+            </button>
+            <button onclick="fetchAll()" id="refresh-btn" class="border border-white/20 px-4 py-3 rounded-lg text-xs hover:bg-white/5 transition">
+                Refresh All
+            </button>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mb-8" id="wallet-tags"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="glass-card p-5">
+                <p class="text-[10px] text-gray-500 uppercase font-bold mb-2">Wallets</p>
+                <p class="text-2xl font-bold" id="s-wallets">0</p>
+            </div>
+            <div class="glass-card p-5 neon-blue">
+                <p class="text-[10px] text-gray-500 uppercase font-bold mb-2">Total Balance</p>
+                <p class="text-2xl font-bold"><span id="s-vol">—</span> <span class="text-xs text-blue-400">MON</span></p>
+            </div>
+            <div class="glass-card p-5 neon-purple">
+                <p class="text-[10px] text-gray-500 uppercase font-bold mb-2">Total Txs</p>
+                <p class="text-2xl font-bold" id="s-txs">—</p>
+            </div>
+            <div class="glass-card p-5 neon-green">
+                <p class="text-[10px] text-gray-500 uppercase font-bold mb-2">Top Active</p>
+                <p class="text-sm font-bold truncate mt-2 text-green-400" id="s-top">—</p>
+            </div>
+        </div>
+
+        <div class="glass-card overflow-hidden">
+            <div class="bg-white/5 px-6 py-3 border-b border-white/10 flex justify-between items-center">
+                <p class="text-[10px] uppercase tracking-widest text-gray-400 font-bold">Engine Diagnostics</p>
+                <select id="sort-select" onchange="renderTable()" class="bg-transparent text-[10px] uppercase text-blue-400 outline-none cursor-pointer">
+                    <option value="volume">Sort: Balance</option>
+                    <option value="txs">Sort: Txs</option>
+                    <option value="addr">Sort: Addr</option>
+                </select>
+            </div>
+            <div class="p-0 overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="text-[10px] uppercase text-gray-500 bg-white/5">
+                        <tr>
+                            <th class="px-6 py-3">Wallet</th>
+                            <th class="px-6 py-3 text-right">Balance</th>
+                            <th class="px-6 py-3 text-right">Txs</th>
+                            <th class="px-6 py-3 text-right">Block</th>
+                            <th class="px-6 py-3 text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-sm">
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-gray-600 italic">Waiting for input...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const RPCS = ["https://monad-mainnet.drpc.org", "https://rpc.ankr.com/monad"];
+        let rpcIdx = 0;
+        let wallets = [];
+
+        function shortAddr(addr) { return addr.slice(0, 6) + "..." + addr.slice(-4); }
+        function isValidAddr(addr) { return /^0x[0-9a-fA-F]{40}$/.test(addr.trim()); }
+
+        async function rpcCall(method, params) {
+            for (let attempt = 0; attempt < RPCS.length; attempt++) {
+                try {
+                    const res = await fetch(RPCS[(rpcIdx + attempt) % RPCS.length], {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
+                    });
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error.message);
+                    return data.result;
+                } catch (e) { if (attempt === RPCS.length - 1) throw e; }
+            }
+        }
+
+        async function fetchWalletData(addr) {
+            const [txCountHex, balanceHex, blockHex] = await Promise.all([
+                rpcCall("eth_getTransactionCount", [addr, "latest"]),
+                rpcCall("eth_getBalance", [addr, "latest"]),
+                rpcCall("eth_blockNumber", [])
+            ]);
+            return {
+                txCount: parseInt(txCountHex, 16),
+                balanceMON: parseInt(balanceHex, 16) / 1e18,
+                blockNumber: parseInt(blockHex, 16)
+            };
+        }
+
+        function addWallet() {
+            const inp = document.getElementById("wallet-input");
+            const aliasInp = document.getElementById("alias-input");
+            const addr = inp.value.trim();
+            if (!isValidAddr(addr)) return;
+            
+            const entry = { addr, alias: aliasInp.value.trim(), data: null, loading: true };
+            wallets.push(entry);
+            inp.value = ""; aliasInp.value = "";
+            
+            renderTags(); renderTable();
+            fetchWalletData(addr).then(d => { entry.data = d; entry.loading = false; })
+                .catch(() => { entry.loading = false; })
+                .finally(() => { renderTable(); updateStats(); });
+        }
+
+        function removeWallet(addr) {
+            wallets = wallets.filter(w => w.addr !== addr);
+            renderTags(); renderTable(); updateStats();
+        }
+
+        async function fetchAll() {
+            const btn = document.getElementById("refresh-btn");
+            btn.innerText = "Scanning...";
+            await Promise.all(wallets.map(async w => {
+                w.loading = true; renderTable();
+                try { w.data = await fetchWalletData(w.addr); } finally { w.loading = false; }
+            }));
+            btn.innerText = "Refresh All";
+            renderTable(); updateStats();
+        }
+
+        function renderTags() {
+            const el = document.getElementById("wallet-tags");
+            el.innerHTML = wallets.map(w => `
+                <div class="bg-white/5 border border-white/10 px-3 py-1 rounded-full text-[10px] flex items-center gap-2">
+                    <span class="text-blue-400">${w.alias || shortAddr(w.addr)}</span>
+                    <span class="cursor-pointer hover:text-red-400" onclick="removeWallet('${w.addr}')">×</span>
+                </div>
+            `).join("");
+        }
+
+        function renderTable() {
+            const body = document.getElementById("table-body");
+            if (!wallets.length) {
+                body.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-600 italic">Add a wallet to begin diagnostic scan...</td></tr>`;
+                return;
+            }
+
+            const sort = document.getElementById("sort-select").value;
+            let sorted = [...wallets].sort((a, b) => {
+                if (sort === "volume") return (b.data?.balanceMON || 0) - (a.data?.balanceMON || 0);
+                if (sort === "txs") return (b.data?.txCount || 0) - (a.data?.txCount || 0);
+                return a.addr.localeCompare(b.addr);
+            });
+
+            body.innerHTML = sorted.map(w => `
+                <tr class="table-row">
+                    <td class="px-6 py-4">
+                        <div class="text-blue-300 font-bold">${w.alias || 'No Label'}</div>
+                        <div class="text-[10px] text-gray-500">${shortAddr(w.addr)}</div>
+                    </td>
+                    <td class="px-6 py-4 text-right font-bold">${w.loading ? '...' : (w.data?.balanceMON.toFixed(3) || '0.000')}</td>
+                    <td class="px-6 py-4 text-right">${w.loading ? '...' : (w.data?.txCount || 0)}</td>
+                    <td class="px-6 py-4 text-right text-[10px] text-gray-500">#${w.data?.blockNumber || '---'}</td>
+                    <td class="px-6 py-4 text-right">
+                        ${w.loading ? '<div class="spinner ml-auto"></div>' : `<span class="text-[10px] px-2 py-1 rounded bg-green-500/10 text-green-400 border border-green-500/20">READY</span>`}
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        function updateStats() {
+            const loaded = wallets.filter(w => w.data);
+            document.getElementById("s-wallets").innerText = wallets.length;
+            if (!loaded.length) return;
+
+            const totalTxs = loaded.reduce((a, w) => a + w.data.txCount, 0);
+            const totalVol = loaded.reduce((a, w) => a + w.data.balanceMON, 0);
+            const top = [...loaded].sort((a, b) => b.data.txCount - a.data.txCount)[0];
+
+            document.getElementById("s-txs").innerText = totalTxs.toLocaleString();
+            document.getElementById("s-vol").innerText = totalVol.toFixed(2);
+            document.getElementById("s-top").innerText = top.alias || shortAddr(top.addr);
+        }
+    </script>
+</body>
+</html>
