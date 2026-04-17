@@ -1,0 +1,322 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.tracker { padding: 1.5rem 0; max-width: 860px; }
+.header { display: flex; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
+.logo { width: 32px; height: 32px; border-radius: 50%; background: #7C3AED; display: flex; align-items: center; justify-content: center; }
+.logo svg { width: 18px; height: 18px; }
+.title { font-size: 20px; font-weight: 500; color: var(--color-text-primary); }
+.subtitle { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; }
+.net-badge { font-size: 10px; padding: 2px 8px; border-radius: 99px; background: #EAF3DE; color: #3B6D11; font-weight: 500; margin-left: 6px; vertical-align: middle; }
+
+.input-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+.input-row input { flex: 1; font-size: 13px; font-family: var(--font-mono); padding: 0 12px; height: 36px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); outline: none; }
+.input-row input:focus { border-color: #7C3AED; box-shadow: 0 0 0 2px rgba(124,58,237,0.15); }
+.btn { height: 36px; padding: 0 16px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; color: var(--color-text-primary); font-size: 13px; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+.btn:hover { background: var(--color-background-secondary); }
+.btn.primary { background: #7C3AED; color: #fff; border-color: #7C3AED; }
+.btn.primary:hover { background: #6D28D9; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.wallet-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1rem; }
+.tag { display: flex; align-items: center; gap: 6px; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 4px 10px; font-size: 12px; font-family: var(--font-mono); color: var(--color-text-secondary); }
+.tag .remove { cursor: pointer; color: var(--color-text-tertiary); font-size: 14px; line-height: 1; }
+.tag .remove:hover { color: var(--color-text-primary); }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
+.stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 14px 16px; }
+.stat-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-value { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.stat-sub { font-size: 11px; color: var(--color-text-tertiary); margin-top: 3px; }
+
+.table-wrap { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; }
+.table-header { display: grid; grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr; padding: 10px 16px; border-bottom: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary); }
+.table-header span { font-size: 11px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+.table-header span:not(:first-child) { text-align: right; }
+
+.wallet-row { display: grid; grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr; padding: 12px 16px; border-bottom: 0.5px solid var(--color-border-tertiary); align-items: center; transition: background 0.1s; }
+.wallet-row:last-child { border-bottom: none; }
+.wallet-row:hover { background: var(--color-background-secondary); }
+.wallet-addr { font-size: 12px; font-family: var(--font-mono); color: var(--color-text-primary); }
+.wallet-addr .alias { font-size: 11px; color: var(--color-text-tertiary); display: block; font-family: var(--font-sans); }
+.cell { font-size: 13px; color: var(--color-text-primary); text-align: right; }
+.cell.muted { color: var(--color-text-secondary); }
+.badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 99px; font-weight: 500; }
+.badge.up { background: #EAF3DE; color: #3B6D11; }
+.badge.down { background: #FCEBEB; color: #A32D2D; }
+.badge.loading { background: var(--color-background-secondary); color: var(--color-text-tertiary); }
+
+.spinner { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--color-border-tertiary); border-top-color: #7C3AED; border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 6px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty { text-align: center; padding: 3rem 1rem; color: var(--color-text-tertiary); font-size: 13px; }
+.controls-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+.controls-row select { height: 32px; padding: 0 10px; font-size: 12px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); cursor: pointer; }
+.section-label { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.err-msg { font-size: 11px; color: #E24B4A; }
+</style>
+
+<h2 class="sr-only">Monad mainnet wallet volume tracker — monitor transaction volume across multiple wallets on Monad mainnet</h2>
+
+<div class="tracker">
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="rgba(255,255,255,0.2)" stroke="white" stroke-width="1.5"/>
+        <circle cx="12" cy="12" r="3" fill="white"/>
+      </svg>
+    </div>
+    <div>
+      <div class="title">Monad volume tracker <span class="net-badge">mainnet</span></div>
+      <div class="subtitle">Monitor transaction volume across wallets · Chain ID 143</div>
+    </div>
+  </div>
+
+  <div class="input-row">
+    <input type="text" id="wallet-input" placeholder="Enter wallet address (0x...)" />
+    <input type="text" id="alias-input" placeholder="Label (optional)" style="max-width:160px;" />
+    <button class="btn primary" onclick="addWallet()">Add wallet</button>
+    <button class="btn" onclick="fetchAll()" id="refresh-btn">Refresh all</button>
+  </div>
+
+  <div class="wallet-tags" id="wallet-tags"></div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total wallets</div>
+      <div class="stat-value" id="s-wallets">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total txs sent</div>
+      <div class="stat-value" id="s-txs">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total balance</div>
+      <div class="stat-value" id="s-vol">—</div>
+      <div class="stat-sub">MON</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Most active</div>
+      <div class="stat-value" id="s-top" style="font-size:13px; padding-top:4px; font-family: var(--font-mono);">—</div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <span class="section-label">Wallet details</span>
+    <select id="sort-select" onchange="renderTable()">
+      <option value="volume">Sort by balance</option>
+      <option value="txs">Sort by tx count</option>
+      <option value="addr">Sort by address</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-header">
+      <span>Wallet</span>
+      <span>Balance (MON)</span>
+      <span>Txs sent</span>
+      <span>Block height</span>
+      <span>Status</span>
+    </div>
+    <div id="table-body">
+      <div class="empty">Add a wallet address above to start tracking on Monad mainnet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const RPCS = [
+  "https://monad-mainnet.drpc.org",
+  "https://rpc.ankr.com/monad",
+];
+let rpcIdx = 0;
+let wallets = [];
+
+function rpc() { return RPCS[rpcIdx % RPCS.length]; }
+
+function shortAddr(addr) { return addr.slice(0,6) + "..." + addr.slice(-4); }
+function isValidAddr(addr) { return /^0x[0-9a-fA-F]{40}$/.test(addr.trim()); }
+
+async function rpcCall(method, params) {
+  for (let attempt = 0; attempt < RPCS.length; attempt++) {
+    try {
+      const res = await fetch(RPCS[(rpcIdx + attempt) % RPCS.length], {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({jsonrpc:"2.0", id:1, method, params})
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      rpcIdx = (rpcIdx + attempt) % RPCS.length;
+      return data.result;
+    } catch(e) {
+      if (attempt === RPCS.length - 1) throw e;
+    }
+  }
+}
+
+async function fetchWalletData(addr) {
+  const [txCountHex, balanceHex, blockHex] = await Promise.all([
+    rpcCall("eth_getTransactionCount", [addr, "latest"]),
+    rpcCall("eth_getBalance", [addr, "latest"]),
+    rpcCall("eth_blockNumber", [])
+  ]);
+  return {
+    txCount: parseInt(txCountHex, 16),
+    balanceMON: parseInt(balanceHex, 16) / 1e18,
+    blockNumber: parseInt(blockHex, 16)
+  };
+}
+
+function addWallet() {
+  const inp = document.getElementById("wallet-input");
+  const aliasInp = document.getElementById("alias-input");
+  const addr = inp.value.trim();
+  const alias = aliasInp.value.trim();
+
+  if (!isValidAddr(addr)) {
+    inp.style.borderColor = "#E24B4A";
+    setTimeout(() => inp.style.borderColor = "", 1200);
+    return;
+  }
+  if (wallets.find(w => w.addr.toLowerCase() === addr.toLowerCase())) {
+    inp.style.borderColor = "#EF9F27";
+    setTimeout(() => inp.style.borderColor = "", 1200);
+    return;
+  }
+
+  const entry = { addr, alias: alias || "", data: null, loading: true, error: null };
+  wallets.push(entry);
+  inp.value = "";
+  aliasInp.value = "";
+
+  renderTags();
+  renderTable();
+  updateStats();
+
+  fetchWalletData(addr).then(d => {
+    entry.data = d;
+    entry.loading = false;
+    entry.error = null;
+  }).catch(e => {
+    entry.error = e.message || "RPC error";
+    entry.loading = false;
+  }).finally(() => {
+    renderTable();
+    updateStats();
+  });
+}
+
+function removeWallet(addr) {
+  wallets = wallets.filter(w => w.addr !== addr);
+  renderTags();
+  renderTable();
+  updateStats();
+}
+
+async function fetchAll() {
+  if (!wallets.length) return;
+  const btn = document.getElementById("refresh-btn");
+  btn.disabled = true;
+  btn.textContent = "Refreshing...";
+  wallets.forEach(w => { w.loading = true; w.error = null; });
+  renderTable();
+
+  await Promise.all(wallets.map(w =>
+    fetchWalletData(w.addr).then(d => {
+      w.data = d; w.loading = false; w.error = null;
+    }).catch(e => {
+      w.error = e.message || "RPC error"; w.loading = false;
+    })
+  ));
+
+  renderTable();
+  updateStats();
+  btn.disabled = false;
+  btn.textContent = "Refresh all";
+}
+
+function renderTags() {
+  const el = document.getElementById("wallet-tags");
+  if (!wallets.length) { el.innerHTML = ""; return; }
+  el.innerHTML = wallets.map(w => `
+    <div class="tag">
+      ${w.alias ? `<span style="color:var(--color-text-primary);font-family:var(--font-sans)">${w.alias}</span><span style="opacity:0.4">|</span>` : ""}
+      ${shortAddr(w.addr)}
+      <span class="remove" onclick="removeWallet('${w.addr}')">&times;</span>
+    </div>
+  `).join("");
+}
+
+function renderTable() {
+  const body = document.getElementById("table-body");
+  if (!wallets.length) {
+    body.innerHTML = `<div class="empty">Add a wallet address above to start tracking on Monad mainnet</div>`;
+    return;
+  }
+
+  const sort = document.getElementById("sort-select").value;
+  let sorted = [...wallets];
+  if (sort === "volume") sorted.sort((a,b) => (b.data?.balanceMON||0) - (a.data?.balanceMON||0));
+  else if (sort === "txs") sorted.sort((a,b) => (b.data?.txCount||0) - (a.data?.txCount||0));
+  else sorted.sort((a,b) => a.addr.localeCompare(b.addr));
+
+  body.innerHTML = sorted.map(w => {
+    if (w.loading) return `
+      <div class="wallet-row">
+        <div class="wallet-addr">
+          ${w.alias ? `<span class="alias">${w.alias}</span>` : ""}
+          ${shortAddr(w.addr)}
+        </div>
+        <div class="cell muted" style="grid-column:span 3; text-align:right;">
+          <span class="spinner"></span>fetching...
+        </div>
+        <div class="cell"><span class="badge loading">—</span></div>
+      </div>`;
+
+    if (w.error) return `
+      <div class="wallet-row">
+        <div class="wallet-addr">
+          ${w.alias ? `<span class="alias">${w.alias}</span>` : ""}
+          ${shortAddr(w.addr)}
+        </div>
+        <div class="cell err-msg" style="grid-column:span 3; text-align:right;">${w.error}</div>
+        <div class="cell"><span class="badge down">error</span></div>
+      </div>`;
+
+    const vol = w.data.balanceMON.toFixed(4);
+    const txs = w.data.txCount.toLocaleString();
+    const block = w.data.blockNumber.toLocaleString();
+    const isActive = w.data.txCount > 0;
+    return `
+      <div class="wallet-row">
+        <div class="wallet-addr">
+          ${w.alias ? `<span class="alias">${w.alias}</span>` : ""}
+          ${shortAddr(w.addr)}
+        </div>
+        <div class="cell">${vol}</div>
+        <div class="cell">${txs}</div>
+        <div class="cell muted" style="font-size:11px;">#${block}</div>
+        <div class="cell"><span class="badge ${isActive ? 'up' : 'down'}">${isActive ? 'active' : 'new'}</span></div>
+      </div>`;
+  }).join("");
+}
+
+function updateStats() {
+  const loaded = wallets.filter(w => w.data && !w.loading);
+  document.getElementById("s-wallets").textContent = wallets.length;
+
+  if (!loaded.length) {
+    ["s-txs","s-vol","s-top"].forEach(id => document.getElementById(id).textContent = "—");
+    return;
+  }
+
+  const totalTxs = loaded.reduce((a,w) => a + w.data.txCount, 0);
+  const totalVol = loaded.reduce((a,w) => a + w.data.balanceMON, 0);
+  const top = [...loaded].sort((a,b) => b.data.txCount - a.data.txCount)[0];
+
+  document.getElementById("s-txs").textContent = totalTxs.toLocaleString();
+  document.getElementById("s-vol").textContent = totalVol.toFixed(2);
+  document.getElementById("s-top").textContent = top ? (top.alias || shortAddr(top.addr)) : "—";
+}
+</script>
